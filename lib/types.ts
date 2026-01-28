@@ -26,6 +26,7 @@ export interface ChatStats {
   chatDuration: { days: number; months: number; years: number }
   chatAura: { name: string; description: string }
   funFacts: string[]
+  artistaTop: { name: string; description: string; emoji: string }
   generoDelAno: { tema: string; porcentaje: number; detalles: string }[]
   cancionRepeat: { palabra: string; significado: string }[]
   momentosMemorables: { titulo: string; historia: string }[]
