@@ -19,17 +19,17 @@ export async function POST(req: Request) {
 
     const contents = [
       {
-        text: `Eres un experto en análisis de chats narrativos. Analiza el siguiente chat exportado y genera un análisis detallado en formato JSON tipo "Spotify Wrapped" para chats.
+        text: `Eres un experto en análisis de chats. Analiza el siguiente chat exportado y genera un análisis EXACTAMENTE en este formato JSON.
 
-IMPORTANTE: 
-- Responde ÚNICAMENTE con un OBJETO JSON VÁLIDO (comienza con { y termina con })
-- NO incluyas markdown, backticks o código innecesario
-- NO incluyas saltos de línea dentro de strings - usa espacios en su lugar
-- Escapa correctamente comillas dobles en strings con backslash
-- Sé CONCISO en descripciones
+⚠️ CRÍTICO: 
+- Responde ÚNICAMENTE con un OBJETO JSON válido
+- Comienza con { y termina con }
+- NO incluyas markdown, backticks, ni código extra
+- NO incluyas saltos de línea dentro de strings
+- Escapa comillas dobles en strings con \\
+- Todos los campos deben estar PRESENTES
 
-Estructura JSON requerida:
-
+Estructura JSON (EXACTA):
 {
   "totalMessages": NÚMERO,
   "totalWords": NÚMERO,
@@ -59,35 +59,16 @@ Estructura JSON requerida:
   "fraseFinal": "STRING"
 }
 
-INSTRUCCIONES CRÍTICAS:
+INSTRUCCIONES:
+1. topEmojis: Los 5-10 emojis más usados con sus conteos
+2. generoDelAno: Máximo 3 temas, descripción concisa (máximo 100 palabras por tema)
+3. cancionRepeat: Palabras/frases memorables (máximo 3, máximo 25 palabras cada una)
+4. momentosMemorables: Máximo 3 anécdotas (máximo 50 palabras cada una)
+5. fraseFinal: Una frase textual graciosa o memorable del chat (máximo 20 palabras)
+6. funFacts: Máximo 5 hechos curiosos (máximo 25 palabras cada uno)
 
-IMPORTANTE: Genera TODOS estos campos:
-- topEmojis: OBLIGATORIO - Los 5-8 emojis más usados en el chat con sus conteos
-
-1. **topEmojis**: Extrae los 5-8 emojis MÁS USADOS en el chat. Revisa todo el contenido.
-   Formato: [{"emoji": "😂", "count": 45}, ...]
-   CRUCIAL: Este campo DEBE estar presente en la respuesta.
-
-2. **generoDelAno**: Formato NARRATIVO con descripción y viñetas. Cada tema debe tener:
-   - Título enganchador (ej: "Gaming & Debugging")
-   - Una línea descriptiva general
-   - 2-3 viñetas con DETALLES ESPECÍFICOS y TEXTUALES del chat
-   MÁXIMO 150 palabras totales por tema, incluyendo viñetas.
-
-3. **cancionRepeat**: Palabras/frases con significado narrativo BREVE (máximo 25 palabras).
-
-4. **momentosMemorables**: Anécdotas CON VIÑETAS de detalles (máximo 60 palabras totales).
-
-5. **fraseFinal**: Frase textual MEMORABLE Y GRACIOSA del chat (máximo 20 palabras).
-
-6. **funFacts**: Hechos curiosos cortos con humor (máximo 25 palabras cada uno).
-
-TONO: Narrativo estilo Spotify Wrapped. Usa humor, nombres reales, referencias específicas del chat.
-Incluye números (1., 2., 3.) en los títulos si es aplicable.
-TEXTOS: Extractos directos, anécdotas divertidas, detalles textuales.
-
-TONO: Breve, conciso, entretenido. Sin párrafos largos.
-TEXTOS: Extractos directos del chat, nombres reales, ejemplos concretos pero CORTOS.
+TONO: Breve, conciso, con humor. Usa nombres reales del chat, referencias específicas.
+IMPORTANTE: Cada campo DEBE tener al menos un valor, nunca vacío.
 
 Chat a analizar:`
       },
@@ -111,24 +92,65 @@ Chat a analizar:`
     try {
       let jsonText = text.trim()
       
+      console.log("📝 Raw response length:", jsonText.length)
+      console.log("📝 Raw response (first 300 chars):", jsonText.substring(0, 300))
+      
       // Remove markdown code blocks (```json ... ```)
       if (jsonText.startsWith("```")) {
         jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "")
+        console.log("✂️ Removed markdown blocks")
       }
       
       // Clean up problematic characters
       // Replace line breaks within strings with spaces
       jsonText = jsonText.replace(/[\r\n]+/g, " ")
       
-      // Fix escaped quotes that might be causing issues
-      jsonText = jsonText.replace(/\\"/g, '"').replace(/"/g, '\\"')
-      jsonText = jsonText.replace(/\\\\"/g, '\\"')
+      console.log("✅ Attempting to parse JSON...")
+      console.log("JSON Preview (first 200 chars):", jsonText.substring(0, 200))
+      console.log("JSON Preview (last 200 chars):", jsonText.substring(jsonText.length - 200))
       
-      const chatStats: ChatStats = JSON.parse(jsonText)
+      const parsedData = JSON.parse(jsonText)
+      console.log("✅ JSON parsed successfully!")
+      console.log("📊 Available fields:", Object.keys(parsedData).join(", "))
+      console.log("Total messages received:", parsedData.totalMessages)
+      
+      // Ensure all required fields exist with proper types
+      const chatStats: ChatStats = {
+        totalMessages: parsedData.totalMessages || 0,
+        totalWords: parsedData.totalWords || 0,
+        totalCharacters: parsedData.totalCharacters || 0,
+        participants: Array.isArray(parsedData.participants) ? parsedData.participants : [],
+        topWords: Array.isArray(parsedData.topWords) ? parsedData.topWords : [],
+        topEmojis: Array.isArray(parsedData.topEmojis) ? parsedData.topEmojis : [],
+        conversationThemes: Array.isArray(parsedData.conversationThemes) ? parsedData.conversationThemes : [],
+        mostActiveHour: parsedData.mostActiveHour || { hour: 0, count: 0 },
+        mostActiveDay: parsedData.mostActiveDay || { day: "N/A", count: 0 },
+        longestStreak: parsedData.longestStreak || { days: 0, startDate: "N/A", endDate: "N/A" },
+        averageMessageLength: parsedData.averageMessageLength || 0,
+        conversationStarters: Array.isArray(parsedData.conversationStarters) ? parsedData.conversationStarters : [],
+        lateNightChatter: parsedData.lateNightChatter || { name: "N/A", count: 0 },
+        earlyBird: parsedData.earlyBird || { name: "N/A", count: 0 },
+        questionAsker: parsedData.questionAsker || { name: "N/A", count: 0 },
+        laughMaster: parsedData.laughMaster || { name: "N/A", count: 0 },
+        voiceNoteFan: parsedData.voiceNoteFan || { name: "N/A", count: 0 },
+        mediaSharer: parsedData.mediaSharer || { name: "N/A", count: 0 },
+        firstMessage: parsedData.firstMessage || { date: "N/A", author: "N/A", content: "N/A" },
+        chatDuration: parsedData.chatDuration || { days: 0, months: 0, years: 0 },
+        chatAura: parsedData.chatAura || { name: "N/A", description: "N/A" },
+        funFacts: Array.isArray(parsedData.funFacts) ? parsedData.funFacts : [],
+        generoDelAno: Array.isArray(parsedData.generoDelAno) ? parsedData.generoDelAno : [],
+        cancionRepeat: Array.isArray(parsedData.cancionRepeat) ? parsedData.cancionRepeat : [],
+        momentosMemorables: Array.isArray(parsedData.momentosMemorables) ? parsedData.momentosMemorables : [],
+        fraseFinal: parsedData.fraseFinal || "N/A"
+      }
+      
+      console.log("✅ ChatStats object created successfully!")
       return Response.json(chatStats)
     } catch (parseError) {
-      console.error("Error parsing Gemini response:", parseError)
-      console.error("Raw response:", text)
+      console.error("❌ Error parsing Gemini response:", parseError)
+      console.error("Error message:", (parseError as Error).message)
+      console.error("Raw response (first 500 chars):", text?.substring(0, 500))
+      console.error("Raw response (last 300 chars):", text?.substring(Math.max(0, text.length - 300)))
 
       // Fallback to hardcoded data if parsing fails
       const fallbackStats: ChatStats = {
@@ -145,6 +167,12 @@ Chat a analizar:`
           { word: "bueno", count: 80 },
           { word: "perfecto", count: 65 },
           { word: "mañana", count: 50 }
+        ],
+        topEmojis: [
+          { emoji: "😂", count: 45 },
+          { emoji: "❤️", count: 32 },
+          { emoji: "👍", count: 28 },
+          { emoji: "🔥", count: 22 }
         ],
         conversationThemes: [
           {
@@ -196,14 +224,34 @@ Chat a analizar:`
           "Comparten muchos momentos de risa",
           "Han enviado cientos de mensajes",
           "Sus conversaciones son variadas e interesantes"
-        ]
+        ],
+        generoDelAno: [
+          {
+            tema: "Conversaciones Generales",
+            porcentaje: 60,
+            detalles: "Charlas cotidianas sobre el día a día"
+          }
+        ],
+        cancionRepeat: [
+          {
+            palabra: "hola",
+            significado: "Saludo común entre ustedes"
+          }
+        ],
+        momentosMemorables: [
+          {
+            titulo: "Momento especial",
+            historia: "Un momento memorable en la conversación"
+          }
+        ],
+        fraseFinal: "¡Que siga la conversación!"
       }
 
+      console.log("⚠️ Using fallback data due to parsing error")
       return Response.json(fallbackStats)
     }
-
   } catch (error) {
     console.error("Error analyzing chat:", error)
     return Response.json({ error: "Error analyzing chat" }, { status: 500 })
   }
-}
+  }
