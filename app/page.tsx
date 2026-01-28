@@ -1,103 +1,182 @@
-import Image from "next/image";
+"use client"
 
-export default function Home() {
+import { useState, useRef, useEffect } from "react"
+import { gsap } from "gsap"
+import { FileUpload } from "@/components/file-upload"
+import { WrappedSlides } from "@/components/wrapped-slides"
+import type { ChatStats } from "@/lib/types"
+import { MessageCircle, Sparkles } from "lucide-react"
+
+export default function ChatWrappedPage() {
+  const [stats, setStats] = useState<ChatStats | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const subtitleRef = useRef<HTMLParagraphElement>(null)
+  const uploadRef = useRef<HTMLDivElement>(null)
+
+
+  useEffect(() => {
+    if (!containerRef.current || stats) return
+
+    const ctx = gsap.context(() => {
+      // Animate title
+      gsap.fromTo(
+        titleRef.current,
+        { y: -50, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }
+      )
+
+      // Animate subtitle
+      gsap.fromTo(
+        subtitleRef.current,
+        { y: -30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, delay: 0.2, ease: "power2.out" }
+      )
+
+      // Animate upload area only if no stats yet
+      if (!stats) {
+        gsap.fromTo(
+          uploadRef.current,
+          { y: 50, opacity: 0, scale: 0.95 },
+          { y: 0, opacity: 1, scale: 1, duration: 0.7, delay: 0.4, ease: "back.out(1.5)" }
+        )
+      }
+    }, containerRef)
+
+    return () => ctx.revert()
+  }, [stats])
+
+
+  const handleFileSelect = async (content: string) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatContent: content }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al analizar el chat")
+      }
+
+      const data = await response.json()
+
+      // Animate out before showing slides
+      if (containerRef.current) {
+        gsap.to(containerRef.current, {
+          opacity: 0,
+          scale: 0.95,
+          duration: 0.4,
+          ease: "power2.in",
+          onComplete: () => setStats(data),
+        })
+      } else {
+        setStats(data)
+      }
+    } catch (err) {
+      setError("Hubo un error al analizar tu chat. Intenta de nuevo.")
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRestart = () => {
+    setStats(null)
+    setError(null)
+  }
+
+  if (stats) {
+    return <WrappedSlides stats={stats} onRestart={handleRestart} />
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div
+      ref={containerRef}
+      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background px-6 py-12"
+    >
+      {/* Animated background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-[var(--wrapped-pink)] rounded-full blur-[180px] opacity-20 animate-pulse" />
+        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-[var(--wrapped-cyan)] rounded-full blur-[160px] opacity-20 animate-pulse" style={{ animationDelay: "1s" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[var(--wrapped-purple)] rounded-full blur-[140px] opacity-15 animate-pulse" style={{ animationDelay: "0.5s" }} />
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      {/* Floating icons */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <MessageCircle
+            key={i}
+            className="absolute text-[var(--wrapped-pink)] opacity-10"
+            style={{
+              left: `${10 + (i % 4) * 25}%`,
+              top: `${15 + Math.floor(i / 4) * 60}%`,
+              width: 24 + (i % 3) * 12,
+              transform: `rotate(${i * 15}deg)`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-xl">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center gap-2 bg-[var(--wrapped-pink)]/10 border border-[var(--wrapped-pink)]/30 px-4 py-2 rounded-full">
+            <Sparkles className="w-4 h-4 text-[var(--wrapped-pink)]" />
+            <span className="text-sm font-medium text-[var(--wrapped-pink)]">
+              Descubre tu ano en mensajes
+            </span>
+          </div>
+
+          <h1
+            ref={titleRef}
+            className="text-5xl md:text-7xl font-black tracking-tight text-foreground text-balance"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Chat
+            <span className="block bg-gradient-to-r from-[var(--wrapped-pink)] via-[var(--wrapped-purple)] to-[var(--wrapped-cyan)] bg-clip-text text-transparent">
+              Wrapped
+            </span>
+          </h1>
+
+          <p
+            ref={subtitleRef}
+            className="text-lg text-muted-foreground max-w-md mx-auto text-pretty"
           >
-            Read our docs
-          </a>
+            Sube tu chat exportado y descubre estadisticas increibles sobre tus conversaciones
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Upload area */}
+        <div ref={uploadRef}>
+          <FileUpload onFileSelect={handleFileSelect} isLoading={isLoading} />
+        </div>
+
+        {/* Instructions */}
+        <div className="text-center text-sm text-muted-foreground max-w-sm space-y-2">
+          <p className="font-medium text-foreground">Como exportar tu chat:</p>
+          <ul className="space-y-1">
+            <li>
+              <span className="text-[var(--wrapped-pink)]">WhatsApp:</span> Chat {'->'} Mas {'->'} Exportar chat
+            </li>
+            <li>
+              <span className="text-[var(--wrapped-cyan)]">Telegram:</span> Chat {'->'} Exportar historial
+            </li>
+          </ul>
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+
+      </div>
     </div>
-  );
+  )
 }
