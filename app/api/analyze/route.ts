@@ -1,13 +1,20 @@
 import { GoogleGenAI } from "@google/genai"
 import type { ChatStats } from "@/lib/types"
 
-const ai = new GoogleGenAI({})
-
-console.log("🔑 API Key loaded:", process.env.GEMINI_API_KEY ? "✅ Sí" : "❌ No")
-console.log("🔑 API Key value:", process.env.GEMINI_API_KEY?.substring(0, 10) + "..." || "No cargada")
+export const dynamic = "force-dynamic"
 
 export async function POST(req: Request) {
   try {
+    if (!process.env.GEMINI_API_KEY) {
+      return Response.json(
+        { error: "Missing GEMINI_API_KEY" },
+        { status: 500 }
+      )
+    }
+
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+    })
     const { chatContent } = await req.json()
 
     console.log("📁 Received chat content length:", chatContent?.length || 0)
