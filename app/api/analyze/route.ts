@@ -138,6 +138,7 @@ Chat a analizar:`
         chatDuration: parsedData.chatDuration || { days: 0, months: 0, years: 0 },
         chatAura: parsedData.chatAura || { name: "N/A", description: "N/A" },
         funFacts: Array.isArray(parsedData.funFacts) ? parsedData.funFacts : [],
+        artistaTop: parsedData.artistaTop || { name: "N/A", description: "N/A", emoji: "🎤" },
         generoDelAno: Array.isArray(parsedData.generoDelAno) ? parsedData.generoDelAno : [],
         cancionRepeat: Array.isArray(parsedData.cancionRepeat) ? parsedData.cancionRepeat : [],
         momentosMemorables: Array.isArray(parsedData.momentosMemorables) ? parsedData.momentosMemorables : [],
@@ -225,6 +226,11 @@ Chat a analizar:`
           "Han enviado cientos de mensajes",
           "Sus conversaciones son variadas e interesantes"
         ],
+        artistaTop: {
+          name: "Top Conversador",
+          description: "El participante más activo en las conversaciones",
+          emoji: "🎤"
+        },
         generoDelAno: [
           {
             tema: "Conversaciones Generales",
